@@ -32,5 +32,9 @@ credentials, history, logs, and caches. To authenticate for the first time,
 run `run-codex --bash -lc 'codex login'`.
 
 The container runs as the invoking host user, mounts the current directory,
-uses Docker bridge networking, and exposes all GPUs. It does not mount the
-host's Docker socket or SSH credentials.
+uses Docker bridge networking, and requests GPU access when an NVIDIA GPU is
+available. It does not mount the host's Docker socket or SSH credentials.
+
+The x86-64 binaries, unpinned dependencies, unrestricted Codex sandbox, and
+GPU access when available are intentional; the launcher automatically omits
+GPU access on hosts where `nvidia-smi` cannot detect an NVIDIA GPU.

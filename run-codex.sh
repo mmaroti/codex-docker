@@ -16,7 +16,6 @@ fi
 docker_args=(
     run --rm --interactive --tty
     --hostname docker
-    --read-only
     --cap-drop ALL
     --security-opt no-new-privileges
     --network bridge
@@ -29,6 +28,11 @@ docker_args=(
     --env CODEX_HOME=/home/codex/.codex
     --env UV_CACHE_DIR=/tmp/uv-cache
 )
+
+# Request GPU access only when the host exposes an NVIDIA GPU.
+if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
+    docker_args+=(--gpus all)
+fi
 
 if [[ ${1:-} == --bash ]]; then
     shift

@@ -11,6 +11,7 @@ RUN apt-get update \
     && apt-get install --no-install-recommends -y \
         bash \
         ca-certificates \
+        cadical \
         curl \
         file \
         git \
@@ -18,8 +19,12 @@ RUN apt-get update \
         jq \
         less \
         procps \
+        poppler-utils \
         ripgrep \
         tar \
+        texlive-latex-base \
+        texlive-latex-recommended \
+        texlive-latex-extra \
         unzip \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid "$CODEX_GID" codex \
