@@ -1,0 +1,61 @@
+FROM python:3.12-slim-bookworm
+
+ARG CODEX_VERSION=0.149.0
+ARG VAMPIRE_VERSION=5.1.0
+ARG CODEX_GID=1000
+ARG CODEX_UID=1000
+
+COPY --from=ghcr.io/astral-sh/uv:0.9.10 /uv /uvx /usr/local/bin/
+
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y \
+        bash \
+        ca-certificates \
+        curl \
+        file \
+        git \
+        gzip \
+        jq \
+        less \
+        procps \
+        ripgrep \
+        tar \
+        unzip \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid "$CODEX_GID" codex \
+    && useradd --create-home --gid codex --shell /bin/bash --uid "$CODEX_UID" codex \
+    && install --directory --mode 0755 /run/codex \
+    && touch /run/codex/auth.json
+
+RUN curl --fail --location --silent --show-error \
+        "https://github.com/openai/codex/releases/download/rust-v${CODEX_VERSION}/codex-package-x86_64-unknown-linux-musl.tar.gz" \
+        --output /tmp/codex.tar.gz \
+    && mkdir /tmp/codex \
+    && tar --extract --file /tmp/codex.tar.gz --gzip --directory /tmp/codex \
+    && install --mode 0755 /tmp/codex/bin/codex /usr/local/bin/codex \
+    && install --mode 0755 /tmp/codex/bin/codex-code-mode-host /usr/local/bin/codex-code-mode-host \
+    && codex --version \
+    && rm -rf /tmp/codex /tmp/codex.tar.gz
+
+RUN curl --fail --location --silent --show-error \
+        "https://github.com/vprover/vampire/releases/download/v${VAMPIRE_VERSION}/vampire-Linux-X64.zip" \
+        --output /tmp/vampire.zip \
+    && mkdir /tmp/vampire \
+    && unzip -q /tmp/vampire.zip -d /tmp/vampire \
+    && install --mode 0755 /tmp/vampire/vampire /usr/local/bin/vampire \
+    && rm -rf /tmp/vampire /tmp/vampire.zip
+
+WORKDIR /opt/relator
+COPY pyproject.toml uv.lock README.md ./
+RUN UV_PROJECT_ENVIRONMENT=/opt/venv uv sync --locked --group dev --no-install-project
+
+ENV HOME=/home/codex \
+    PATH=/opt/venv/bin:$PATH \
+    PYTHONPATH=/home/codex/relator \
+    UV_NO_SYNC=1 \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    VIRTUAL_ENV=/opt/venv
+
+USER codex
+WORKDIR /home/codex/relator
+ENTRYPOINT ["/bin/bash", "-c", "set -e; mkdir -p \"$HOME/.codex\" /tmp/uv-cache; ln -s /run/codex/auth.json \"$HOME/.codex/auth.json\"; ln -s /home/codex/relator/docker/codex/config.toml \"$HOME/.codex/config.toml\"; exec \"$@\"", "--"]
