@@ -45,17 +45,17 @@ RUN curl --fail --location --silent --show-error \
     && install --mode 0755 /tmp/vampire/vampire /usr/local/bin/vampire \
     && rm -rf /tmp/vampire /tmp/vampire.zip
 
-WORKDIR /opt/relator
-COPY pyproject.toml uv.lock README.md ./
-RUN UV_PROJECT_ENVIRONMENT=/opt/venv uv sync --locked --group dev --no-install-project
+# WORKDIR /opt/relator
+# COPY pyproject.toml uv.lock README.md ./
+# RUN UV_PROJECT_ENVIRONMENT=/opt/venv uv sync --locked --group dev --no-install-project
 
 ENV HOME=/home/codex \
     PATH=/opt/venv/bin:$PATH \
-    PYTHONPATH=/home/codex/relator \
+    PYTHONPATH=/home/codex/workspace \
     UV_NO_SYNC=1 \
     UV_PROJECT_ENVIRONMENT=/opt/venv \
     VIRTUAL_ENV=/opt/venv
 
 USER codex
-WORKDIR /home/codex/relator
+WORKDIR /home/codex/workspace
 ENTRYPOINT ["/bin/bash", "-c", "set -e; mkdir -p \"$HOME/.codex\" /tmp/uv-cache; ln -s /run/codex/auth.json \"$HOME/.codex/auth.json\"; ln -s /home/codex/relator/docker/codex/config.toml \"$HOME/.codex/config.toml\"; exec \"$@\"", "--"]

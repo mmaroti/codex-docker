@@ -8,7 +8,10 @@ if [[ ! -r $codex_auth ]]; then
     exit 1
 fi
 
-repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+# Resolve the real script location, even when invoked through ~/bin/run-codex.sh
+script_path=$(readlink -f -- "${BASH_SOURCE[0]}")
+repo_root=$(cd -- "$(dirname -- "$script_path")" && pwd -P)
+
 codex_uid=${CODEX_UID:-$(id -u)}
 codex_gid=${CODEX_GID:-$(id -g)}
 
@@ -20,7 +23,6 @@ else
 fi
 
 exec docker run --rm --interactive --tty \
-    --gpus device=0 \
     --hostname docker \
     --read-only \
     --cap-drop ALL \
@@ -29,10 +31,10 @@ exec docker run --rm --interactive --tty \
     --tmpfs "/home/codex:rw,nosuid,nodev,size=1g,uid=${codex_uid},gid=${codex_gid},mode=0700" \
     --tmpfs "/tmp:rw,nosuid,nodev,size=4g,uid=${codex_uid},gid=${codex_gid},mode=1777" \
     --mount "type=bind,src=${codex_auth},dst=/run/codex/auth.json,readonly" \
-    --mount "type=bind,src=${repo_root},dst=/home/codex/relator" \
-    --workdir /home/codex/relator \
+    --mount "type=bind,src=${repo_root},dst=/home/codex" \
+    --mount "type=bind,src=${repo_root},dst=/home/codex/workspace" \
+    --workdir /home/codex/workspace \
     --env CODEX_HOME=/home/codex/.codex \
-    --env "RELATOR_BENCHMARK_HOST=$(hostname)-docker" \
     --env UV_CACHE_DIR=/tmp/uv-cache \
-    relator-codex:0.149.0 \
+    codex:0.149.0 \
     "${command[@]}"
