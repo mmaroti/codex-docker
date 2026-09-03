@@ -1,6 +1,6 @@
 FROM python:3.12-slim-bookworm
 
-ARG CODEX_VERSION=0.149.0
+ARG CODEX_VERSION=0.150.0
 ARG VAMPIRE_VERSION=5.1.0
 ARG CODEX_GID=1000
 ARG CODEX_UID=1000
@@ -23,9 +23,7 @@ RUN apt-get update \
         unzip \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid "$CODEX_GID" codex \
-    && useradd --create-home --gid codex --shell /bin/bash --uid "$CODEX_UID" codex \
-    && install --directory --mode 0755 /run/codex \
-    && touch /run/codex/auth.json
+    && useradd --create-home --gid codex --shell /bin/bash --uid "$CODEX_UID" codex
 
 RUN curl --fail --location --silent --show-error \
         "https://github.com/openai/codex/releases/download/rust-v${CODEX_VERSION}/codex-package-x86_64-unknown-linux-musl.tar.gz" \
@@ -45,17 +43,8 @@ RUN curl --fail --location --silent --show-error \
     && install --mode 0755 /tmp/vampire/vampire /usr/local/bin/vampire \
     && rm -rf /tmp/vampire /tmp/vampire.zip
 
-# WORKDIR /opt/relator
-# COPY pyproject.toml uv.lock README.md ./
-# RUN UV_PROJECT_ENVIRONMENT=/opt/venv uv sync --locked --group dev --no-install-project
-
-ENV HOME=/home/codex \
-    PATH=/opt/venv/bin:$PATH \
-    PYTHONPATH=/home/codex/workspace \
-    UV_NO_SYNC=1 \
-    UV_PROJECT_ENVIRONMENT=/opt/venv \
-    VIRTUAL_ENV=/opt/venv
+ENV HOME=/home/codex
 
 USER codex
 WORKDIR /home/codex/workspace
-ENTRYPOINT ["/bin/bash", "-c", "set -e; mkdir -p \"$HOME/.codex\" /tmp/uv-cache; ln -s /run/codex/auth.json \"$HOME/.codex/auth.json\"; ln -s /home/codex/relator/docker/codex/config.toml \"$HOME/.codex/config.toml\"; exec \"$@\"", "--"]
+ENTRYPOINT ["codex"]
