@@ -25,6 +25,10 @@ RUN apt-get update \
         texlive-latex-base \
         texlive-latex-recommended \
         texlive-latex-extra \
+        texlive-lang-european \
+        texlive-fonts-recommended \
+        texlive-fonts-extra \
+        lmodern \
         unzip \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid "$CODEX_GID" codex \
