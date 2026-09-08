@@ -1,6 +1,6 @@
 FROM python:3.12-slim-bookworm
 
-ARG CODEX_VERSION=0.150.0
+ARG CODEX_VERSION=0.153.0
 ARG VAMPIRE_VERSION=5.1.0
 ARG CODEX_GID=1000
 ARG CODEX_UID=1000
@@ -28,7 +28,13 @@ RUN apt-get update \
         texlive-lang-european \
         texlive-fonts-recommended \
         texlive-fonts-extra \
+        texlive-extra-utils \
         lmodern \
+        ffmpeg \
+        tesseract-ocr \
+        imagemagick \
+        tesseract-ocr-hun \
+        tidy \
         unzip \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid "$CODEX_GID" codex \

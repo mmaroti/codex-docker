@@ -4,7 +4,7 @@ set -euo pipefail
 codex_uid=${CODEX_UID:-$(id -u)}
 codex_gid=${CODEX_GID:-$(id -g)}
 codex_home=${CODEX_DOCKER_HOME:-${HOME}/.codex-docker}
-codex_image=${CODEX_IMAGE:-codex:0.150.0}
+codex_image=${CODEX_IMAGE:-codex:0.153.0}
 workspace_dir=$(pwd -P)
 
 mkdir -p -- "$codex_home"
@@ -39,7 +39,7 @@ if [[ ${1:-} == --bash ]]; then
     shift
     docker_args+=(--entrypoint bash "$codex_image" "$@")
 else
-    docker_args+=("$codex_image" --sandbox danger-full-access --ask-for-approval on-request "$@")
+    docker_args+=("$codex_image" --sandbox danger-full-access --ask-for-approval never "$@")
 fi
 
 exec docker "${docker_args[@]}"
