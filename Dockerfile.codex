@@ -30,6 +30,7 @@ RUN apt-get update \
         texlive-fonts-extra \
         texlive-extra-utils \
         lmodern \
+        latexmk \
         ffmpeg \
         tesseract-ocr \
         imagemagick \
