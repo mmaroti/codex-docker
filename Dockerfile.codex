@@ -2,6 +2,9 @@ FROM python:3.12-slim-bookworm
 
 ARG CODEX_VERSION=0.153.0
 ARG VAMPIRE_VERSION=5.1.0
+ARG ELAN_VERSION=4.2.3
+ARG LEAN_TOOLCHAIN=leanprover/lean4:v4.34.0
+ARG MATHLIB_REF=v4.34.0
 ARG CODEX_GID=1000
 ARG CODEX_UID=1000
 
@@ -59,8 +62,31 @@ RUN curl --fail --location --silent --show-error \
     && install --mode 0755 /tmp/vampire/vampire /usr/local/bin/vampire \
     && rm -rf /tmp/vampire /tmp/vampire.zip
 
-ENV HOME=/home/codex
+RUN mkdir /opt/elan /opt/mathlib \
+    && chown codex:codex /opt/elan /opt/mathlib
+
+ENV HOME=/home/codex \
+    ELAN_HOME=/opt/elan \
+    PATH=/home/codex/bin:/opt/elan/bin:${PATH}
 
 USER codex
+
+RUN curl --fail --location --silent --show-error \
+        "https://github.com/leanprover/elan/releases/download/v${ELAN_VERSION}/elan-x86_64-unknown-linux-gnu.tar.gz" \
+        --output /tmp/elan.tar.gz \
+    && mkdir /tmp/elan \
+    && tar --extract --file /tmp/elan.tar.gz --gzip --directory /tmp/elan \
+    && /tmp/elan/elan-init -y --no-modify-path --default-toolchain none \
+    && elan toolchain install "$LEAN_TOOLCHAIN" \
+    && elan default "$LEAN_TOOLCHAIN" \
+    && lean --version \
+    && lake --version \
+    && rm -rf /tmp/elan /tmp/elan.tar.gz
+
+RUN git clone --depth 1 --branch "$MATHLIB_REF" \
+        https://github.com/leanprover-community/mathlib4.git /opt/mathlib \
+    && cd /opt/mathlib \
+    && lake exe cache get
+
 WORKDIR /home/codex/workspace
 ENTRYPOINT ["codex"]
