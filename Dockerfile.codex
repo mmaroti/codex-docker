@@ -62,12 +62,19 @@ RUN curl --fail --location --silent --show-error \
     && install --mode 0755 /tmp/vampire/vampire /usr/local/bin/vampire \
     && rm -rf /tmp/vampire /tmp/vampire.zip
 
+# Install stable entry points in addition to PATH configuration below. This
+# keeps Lean usable if an interactive environment replaces PATH.
 RUN mkdir /opt/elan /opt/mathlib \
-    && chown codex:codex /opt/elan /opt/mathlib
+    && chown codex:codex /opt/elan /opt/mathlib \
+    && ln -s /opt/elan/bin/elan /usr/local/bin/elan \
+    && ln -s /opt/elan/bin/lean /usr/local/bin/lean \
+    && ln -s /opt/elan/bin/lake /usr/local/bin/lake
+
+COPY --chmod=0755 home/bin/lean-mathlib.sh /usr/local/bin/lean-mathlib.sh
 
 ENV HOME=/home/codex \
     ELAN_HOME=/opt/elan \
-    PATH=/home/codex/bin:/opt/elan/bin:${PATH}
+    PATH=/home/codex/bin:/opt/elan/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
 
 USER codex
 
