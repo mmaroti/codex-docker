@@ -2,7 +2,7 @@ FROM python:3.12-slim-bookworm
 
 ARG CODEX_VERSION=0.153.0
 ARG VAMPIRE_VERSION=5.1.0
-ARG ELAN_VERSION=4.2.3
+ARG ELAN_VERSION=4.2.4
 ARG LEAN_TOOLCHAIN=leanprover/lean4:v4.34.0
 ARG MATHLIB_REF=v4.34.0
 ARG CODEX_GID=1000
@@ -93,7 +93,8 @@ RUN curl --fail --location --silent --show-error \
 RUN git clone --depth 1 --branch "$MATHLIB_REF" \
         https://github.com/leanprover-community/mathlib4.git /opt/mathlib \
     && cd /opt/mathlib \
-    && lake exe cache get
+    && lake exe cache get || true \
+    && lake build
 
 WORKDIR /home/codex/workspace
 ENTRYPOINT ["codex"]
