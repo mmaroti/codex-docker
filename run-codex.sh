@@ -27,7 +27,6 @@ docker_args=(
     --cap-drop ALL
     --security-opt no-new-privileges
     --network bridge
-    --gpus all
     --user "${codex_uid}:${codex_gid}"
     --tmpfs "/tmp:rw,nosuid,nodev,size=4g,uid=${codex_uid},gid=${codex_gid},mode=1777"
     --mount "type=bind,src=/etc/localtime,dst=/etc/localtime,readonly"
