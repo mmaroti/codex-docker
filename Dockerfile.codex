@@ -1,8 +1,8 @@
 FROM python:3.12-slim-bookworm
 
-ARG CODEX_VERSION=0.153.0
+ARG CODEX_VERSION=0.154.0
 ARG VAMPIRE_VERSION=5.1.0
-ARG ELAN_VERSION=4.2.3
+ARG ELAN_VERSION=4.2.4
 ARG LEAN_TOOLCHAIN=leanprover/lean4:v4.34.0
 ARG MATHLIB_REF=v4.34.0
 ARG CODEX_GID=1000
@@ -13,31 +13,35 @@ COPY --from=ghcr.io/astral-sh/uv:0.9.10 /uv /uvx /usr/local/bin/
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
         bash \
+        build-essential \
         ca-certificates \
         cadical \
+        cmake \
         curl \
+        ffmpeg \
         file \
         git \
         gzip \
+        imagemagick \
         jq \
+        latexmk \
         less \
-        procps \
+        lmodern \
+        ninja-build \
+        pkg-config \
         poppler-utils \
+        procps \
         ripgrep \
         tar \
-        texlive-latex-base \
-        texlive-latex-recommended \
-        texlive-latex-extra \
-        texlive-lang-european \
-        texlive-fonts-recommended \
-        texlive-fonts-extra \
-        texlive-extra-utils \
-        lmodern \
-        latexmk \
-        ffmpeg \
         tesseract-ocr \
-        imagemagick \
         tesseract-ocr-hun \
+        texlive-extra-utils \
+        texlive-fonts-extra \
+        texlive-fonts-recommended \
+        texlive-lang-european \
+        texlive-latex-base \
+        texlive-latex-extra \
+        texlive-latex-recommended \
         tidy \
         unzip \
     && rm -rf /var/lib/apt/lists/* \
@@ -93,7 +97,8 @@ RUN curl --fail --location --silent --show-error \
 RUN git clone --depth 1 --branch "$MATHLIB_REF" \
         https://github.com/leanprover-community/mathlib4.git /opt/mathlib \
     && cd /opt/mathlib \
-    && lake exe cache get
+    && lake exe cache get || true \
+    && lake build
 
 WORKDIR /home/codex/workspace
 ENTRYPOINT ["codex"]
