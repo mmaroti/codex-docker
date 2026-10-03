@@ -4,7 +4,7 @@ set -euo pipefail
 codex_uid=${CODEX_UID:-$(id -u)}
 codex_gid=${CODEX_GID:-$(id -g)}
 codex_home=${CODEX_DOCKER_HOME:-${HOME}/.codex-docker}
-codex_image=${CODEX_IMAGE:-codex:0.156.0}
+codex_image=${CODEX_IMAGE:-codex:0.160.0}
 launcher_path=$(readlink -f -- "${BASH_SOURCE[0]}")
 launcher_dir=$(dirname -- "$launcher_path")
 container_home=${CODEX_CONTAINER_HOME:-"${launcher_dir}/home"}

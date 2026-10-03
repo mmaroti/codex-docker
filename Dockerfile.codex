@@ -1,6 +1,6 @@
 FROM python:3.12-slim-bookworm
 
-ARG CODEX_VERSION=0.156.0
+ARG CODEX_VERSION=0.160.0
 ARG VAMPIRE_VERSION=5.1.0
 ARG ELAN_VERSION=4.2.4
 ARG LEAN_TOOLCHAIN=leanprover/lean4:v4.34.0
@@ -44,6 +44,7 @@ RUN apt-get update \
         texlive-latex-recommended \
         tidy \
         unzip \
+        xz-utils \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid "$CODEX_GID" codex \
     && useradd --create-home --gid codex --shell /bin/bash --uid "$CODEX_UID" codex
@@ -51,12 +52,12 @@ RUN apt-get update \
 RUN curl --fail --location --silent --show-error \
         "https://github.com/openai/codex/releases/download/rust-v${CODEX_VERSION}/codex-package-x86_64-unknown-linux-musl.tar.gz" \
         --output /tmp/codex.tar.gz \
-    && mkdir /tmp/codex \
-    && tar --extract --file /tmp/codex.tar.gz --gzip --directory /tmp/codex \
-    && install --mode 0755 /tmp/codex/bin/codex /usr/local/bin/codex \
-    && install --mode 0755 /tmp/codex/bin/codex-code-mode-host /usr/local/bin/codex-code-mode-host \
+    && mkdir /opt/codex \
+    && tar --extract --file /tmp/codex.tar.gz --gzip --no-same-owner --directory /opt/codex \
+    && ln -s /opt/codex/bin/codex /usr/local/bin/codex \
+    && ln -s /opt/codex/bin/codex-code-mode-host /usr/local/bin/codex-code-mode-host \
     && codex --version \
-    && rm -rf /tmp/codex /tmp/codex.tar.gz
+    && rm -f /tmp/codex.tar.gz
 
 RUN curl --fail --location --silent --show-error \
         "https://github.com/vprover/vampire/releases/download/v${VAMPIRE_VERSION}/vampire-Linux-X64.zip" \
