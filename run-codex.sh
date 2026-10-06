@@ -23,10 +23,8 @@ fi
 
 docker_args=(
     run --rm --interactive --tty
-    --hostname docker
     --cap-drop ALL
     --security-opt no-new-privileges
-    --network bridge
     --user "${codex_uid}:${codex_gid}"
     --tmpfs "/tmp:rw,nosuid,nodev,size=4g,uid=${codex_uid},gid=${codex_gid},mode=1777"
     --mount "type=bind,src=/etc/localtime,dst=/etc/localtime,readonly"
@@ -46,11 +44,13 @@ if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
     docker_args+=(--gpus all)
 fi
 
-if [[ ${1:-} == --bash ]]; then
+if [[ ${1:-} == bash ]]; then
     shift
-    docker_args+=(--entrypoint bash "$codex_image" "$@")
+    docker_args+=(--network bridge --hostname docker --entrypoint bash "$codex_image" "$@")
+elif [[ ${1:-} == login ]]; then
+    docker_args+=(--network host "$codex_image" "$@")
 else
-    docker_args+=("$codex_image" --sandbox danger-full-access --ask-for-approval never "$@")
+    docker_args+=(--network bridge --hostname docker "$codex_image" --sandbox danger-full-access --ask-for-approval never "$@")
 fi
 
 exec docker "${docker_args[@]}"

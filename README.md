@@ -4,37 +4,32 @@ This repository builds a standalone Codex container with access to the host's
 NVIDIA GPUs. The host must have Docker, a working NVIDIA driver, and the NVIDIA
 Container Toolkit configured for Docker.
 
-Build the image from this directory:
+Build and authenticate from this directory:
 
 ```bash
-docker build \
-  --build-arg CODEX_UID="$(id -u)" \
-  --build-arg CODEX_GID="$(id -g)" \
-  -f Dockerfile.codex -t codex:0.160.0 .
+./build-image.sh
+./run-codex.sh login
 ```
 
-Run the launcher from any directory. That directory is mounted at
-`/home/codex/workspace` in the container, so a symlink to `run-codex.sh` can be
-placed anywhere on `PATH`:
+Add the launcher to `PATH` and run it from your project directory:
 
 ```bash
-ln -s "$PWD/run-codex.sh" "$HOME/.local/bin/run-codex"
+ln -s "$PWD/run-codex.sh" "$HOME/.local/bin/run-codex.sh"
 cd /path/to/project
-run-codex
+run-codex.sh
 ```
 
-Use `run-codex --bash` to open a shell in the same container. Additional
-arguments are passed to Codex.
+Use `run-codex.sh bash` for a shell. Additional arguments are passed to
+Codex, Bash, or `codex login`, depending on the mode.
 
-The repository's `home/` directory is mounted as `/home/codex`, providing
-container-wide tools and instructions. Persistent Codex state is stored
-separately in `~/.codex-docker/` and mounted at `/home/codex/.codex`; it
-includes `config.toml`, login credentials, history, logs, and caches. To
-authenticate for the first time, run `run-codex --bash -lc 'codex login'`.
+The current directory is mounted at `/home/codex/workspace`, and persistent
+Codex state (including credentials) at `~/.codex-docker/`, mounted as
+`/home/codex/.codex`.
 
 The container runs as the invoking host user, mounts the current directory,
-uses Docker bridge networking, and requests GPU access when an NVIDIA GPU is
-available. It does not mount the host's Docker socket or SSH credentials.
+uses Docker bridge networking (host networking for `login`), and requests GPU
+access when an NVIDIA GPU is available. It does not mount the host's Docker
+socket or SSH credentials.
 
 The x86-64 binaries, unpinned dependencies, unrestricted Codex sandbox, and
 GPU access when available are intentional; the launcher automatically omits
@@ -42,19 +37,15 @@ GPU access on hosts where `nvidia-smi` cannot detect an NVIDIA GPU.
 
 ## Lean verification
 
-The image includes pinned Lean 4, Lake, and a cached Mathlib checkout. Use
-`lean` for core Lean files and `lean-mathlib.sh` for standalone files that
-import Mathlib:
+The image includes pinned Lean 4, Lake, and cached Mathlib:
 
 ```bash
 lean Proof.lean
 lean-mathlib.sh ProofWithMathlib.lean
 ```
 
-For a Lean project, use its normal commands such as `lake build`. A project
-`lean-toolchain` file selects its own Lean version, and project dependencies
-remain managed by its `lakefile`.
+For Lean projects, use `lake build`; `lean-toolchain` and `lakefile` select
+the project's toolchain and dependencies.
 
-The image defaults can be updated deliberately at build time with
-`ELAN_VERSION`, `LEAN_TOOLCHAIN`, and `MATHLIB_REF` build arguments. The Lean
-toolchain and Mathlib reference must remain compatible.
+Build arguments `ELAN_VERSION`, `LEAN_TOOLCHAIN`, and `MATHLIB_REF` override
+the image defaults. Keep the Lean toolchain and Mathlib reference compatible.
