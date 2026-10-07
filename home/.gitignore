@@ -1,7 +1,0 @@
-# Container home directories are runtime state.  Keep only the checked-in
-# helper scripts under bin/.
-*
-!.gitignore
-!AGENTS.md
-!bin/
-!bin/lean-mathlib.sh

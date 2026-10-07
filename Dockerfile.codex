@@ -139,7 +139,7 @@ RUN git clone --depth 1 --branch "$MATHLIB_REF" \
     && (lake exe cache get || true) \
     && lake build
 
-# Keep the matching exporter and Comparator outside the mounted home directory.
+# Keep the matching exporter and Comparator alongside the other system tools.
 # Use an explicit toolchain without changing the default Lean/Mathlib version.
 RUN git clone --depth 1 --branch "$MATHLIB_REF" \
         https://github.com/leanprover/comparator.git /tmp/comparator \
@@ -151,6 +151,11 @@ RUN install --mode 0755 /tmp/comparator/.lake/build/bin/comparator /usr/local/bi
     && install --mode 0755 /tmp/comparator/.lake/packages/lean4export/.lake/build/bin/lean4export /usr/local/bin/lean4export \
     && rm -rf /tmp/comparator
 
+# Seed each container's private home with all files from the home template.
+# Codex state is mounted separately by run-codex.sh and never copied into the image.
+COPY --chown=codex:codex home/ /home/codex/
+
 USER codex
+RUN mkdir -p /home/codex/.codex /home/codex/workspace
 WORKDIR /home/codex/workspace
 ENTRYPOINT ["codex"]

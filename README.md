@@ -23,10 +23,16 @@ run-codex.sh
 Use `run-codex.sh bash` for a shell. Additional arguments are passed to the
 selected command.
 
-The launcher mounts your project at `/home/codex/workspace`, this repository's
-`home/` directory at `/home/codex`, and persistent credentials and Codex state
-from `~/.codex-docker/`. It runs as your host user with unrestricted Codex
-sandbox access inside the container.
+The launcher mounts your project at `/home/codex/workspace` and persistent
+credentials and Codex state from `~/.codex-docker/` at `/home/codex/.codex`.
+Each container has its own writable home directory, seeded at image build time
+with all files from this repository's `home/` directory except `.codex/`.
+Files added there, including dotfiles and files not yet tracked by Git, appear
+in new containers after rebuilding with `./build-image.sh`. Other home directory
+changes are discarded when the container is removed.
+It runs as your host user with unrestricted Codex sandbox access inside the
+container. Interactive Codex launches use `--no-daemon`, so you can manage
+independent instances with tmux.
 
 Tools include Python, PyTorch with CUDA, uv, Lean, Lake, Mathlib,
 Comparator, Vampire, CaDiCaL, LaTeX, and OCR. In a container shell:
