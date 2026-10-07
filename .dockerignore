@@ -1,0 +1,7 @@
+**
+!Dockerfile.codex
+!home/
+home/**
+!home/bin/
+home/bin/**
+!home/bin/lean-mathlib.sh

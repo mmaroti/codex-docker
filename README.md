@@ -28,7 +28,7 @@ The launcher mounts your project at `/home/codex/workspace`, this repository's
 from `~/.codex-docker/`. It runs as your host user with unrestricted Codex
 sandbox access inside the container.
 
-Tools include Python 3.13, PyTorch with CUDA, uv, Lean, Lake, Mathlib,
+Tools include Python, PyTorch with CUDA, uv, Lean, Lake, Mathlib,
 Comparator, Vampire, CaDiCaL, LaTeX, and OCR. In a container shell:
 
 ```bash
@@ -39,6 +39,6 @@ lake build
 lake env comparator config.json
 ```
 
-Comparator and its exporter target Lean 4.34.1. Nanoda is not installed.
-Comparator requires host Landlock support and Docker permission for its
-syscalls.
+Lean, Mathlib, Comparator, and lean4export must use matching Lean versions.
+Nanoda is not installed. Comparator requires host Landlock support and Docker
+permission for its syscalls.

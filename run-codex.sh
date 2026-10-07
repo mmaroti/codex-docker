@@ -4,7 +4,7 @@ set -euo pipefail
 codex_uid=${CODEX_UID:-$(id -u)}
 codex_gid=${CODEX_GID:-$(id -g)}
 codex_home=${CODEX_DOCKER_HOME:-${HOME}/.codex-docker}
-codex_image=${CODEX_IMAGE:-codex:0.160.0}
+codex_image=${CODEX_IMAGE:-codex:0.160.1}
 launcher_path=$(readlink -f -- "${BASH_SOURCE[0]}")
 launcher_dir=$(dirname -- "$launcher_path")
 container_home=${CODEX_CONTAINER_HOME:-"${launcher_dir}/home"}
@@ -26,7 +26,7 @@ docker_args=(
     --cap-drop ALL
     --security-opt no-new-privileges
     --user "${codex_uid}:${codex_gid}"
-    --tmpfs "/tmp:rw,nosuid,nodev,size=4g,uid=${codex_uid},gid=${codex_gid},mode=1777"
+    --tmpfs "/tmp:rw,exec,nosuid,nodev,size=4g,uid=${codex_uid},gid=${codex_gid},mode=1777"
     --mount "type=bind,src=/etc/localtime,dst=/etc/localtime,readonly"
     --mount "type=bind,src=${workspace_dir},dst=/home/codex/workspace"
     --mount "type=bind,src=${container_home},dst=/home/codex"

@@ -1,29 +1,16 @@
-FROM debian:13-slim AS landrun-build
-
-RUN apt-get update \
-    && apt-get install --no-install-recommends -y ca-certificates git golang-go
-
-# Pin a revision from main, as required by Comparator, rather than a release.
-ARG LANDRUN_REF=811cfff51ceaf3d9843708aa6d22e9b84ccac8b4
-RUN CGO_ENABLED=0 GOBIN=/out go install \
-        github.com/zouuup/landrun/cmd/landrun@${LANDRUN_REF}
-
 FROM debian:13-slim
 
-ARG CODEX_VERSION=0.160.0
+ARG CODEX_VERSION=0.160.1
 ARG UV_VERSION=0.9.10
 ARG PYTORCH_VERSION=2.11.0
 ARG PYTORCH_INDEX_URL=https://download.pytorch.org/whl/cu128
 ARG VAMPIRE_VERSION=5.1.0
 ARG ELAN_VERSION=4.2.4
-ARG LEAN_TOOLCHAIN=leanprover/lean4:v4.34.0
 ARG MATHLIB_REF=v4.34.0
-ARG COMPARATOR_REF=v4.34.0
-ARG COMPARATOR_TOOLCHAIN=leanprover/lean4:v4.34.1
+ARG LEAN_TOOLCHAIN=leanprover/lean4:${MATHLIB_REF}
+ARG LANDRUN_VERSION=0.1.17
 ARG CODEX_GID=1000
 ARG CODEX_UID=1000
-
-COPY --from=landrun-build /out/landrun /usr/local/bin/landrun
 
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
@@ -36,6 +23,7 @@ RUN apt-get update \
         ffmpeg \
         file \
         git \
+        golang-go \
         gzip \
         imagemagick \
         jq \
@@ -67,6 +55,11 @@ RUN apt-get update \
         xz-utils \
     && groupadd --gid "$CODEX_GID" codex \
     && useradd --create-home --gid codex --shell /bin/bash --uid "$CODEX_UID" codex
+
+# Build a pinned Landrun release.
+RUN CGO_ENABLED=0 GOBIN=/usr/local/bin go install \
+        github.com/zouuup/landrun/cmd/landrun@v${LANDRUN_VERSION} \
+    && landrun --version
 
 # Keep pip installations separate from Debian's managed Python packages.
 RUN python3 -m venv /opt/venv \
@@ -143,16 +136,15 @@ RUN curl --fail --location --silent --show-error \
 RUN git clone --depth 1 --branch "$MATHLIB_REF" \
         https://github.com/leanprover-community/mathlib4.git /opt/mathlib \
     && cd /opt/mathlib \
-    && lake exe cache get || true \
+    && (lake exe cache get || true) \
     && lake build
 
 # Keep the matching exporter and Comparator outside the mounted home directory.
 # Use an explicit toolchain without changing the default Lean/Mathlib version.
-RUN elan toolchain install "$COMPARATOR_TOOLCHAIN" \
-    && git clone --depth 1 --branch "$COMPARATOR_REF" \
+RUN git clone --depth 1 --branch "$MATHLIB_REF" \
         https://github.com/leanprover/comparator.git /tmp/comparator \
     && cd /tmp/comparator \
-    && elan run "$COMPARATOR_TOOLCHAIN" lake build lean4export comparator
+    && elan run "$LEAN_TOOLCHAIN" lake build lean4export comparator
 
 USER root
 RUN install --mode 0755 /tmp/comparator/.lake/build/bin/comparator /usr/local/bin/comparator \

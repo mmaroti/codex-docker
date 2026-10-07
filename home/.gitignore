@@ -4,4 +4,4 @@
 !.gitignore
 !AGENTS.md
 !bin/
-!bin/**
+!bin/lean-mathlib.sh
