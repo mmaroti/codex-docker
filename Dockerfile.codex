@@ -1,14 +1,29 @@
-FROM python:3.12-slim-bookworm
+FROM debian:13-slim AS landrun-build
+
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y ca-certificates git golang-go
+
+# Pin a revision from main, as required by Comparator, rather than a release.
+ARG LANDRUN_REF=811cfff51ceaf3d9843708aa6d22e9b84ccac8b4
+RUN CGO_ENABLED=0 GOBIN=/out go install \
+        github.com/zouuup/landrun/cmd/landrun@${LANDRUN_REF}
+
+FROM debian:13-slim
 
 ARG CODEX_VERSION=0.160.0
+ARG UV_VERSION=0.9.10
+ARG PYTORCH_VERSION=2.11.0
+ARG PYTORCH_INDEX_URL=https://download.pytorch.org/whl/cu128
 ARG VAMPIRE_VERSION=5.1.0
 ARG ELAN_VERSION=4.2.4
 ARG LEAN_TOOLCHAIN=leanprover/lean4:v4.34.0
 ARG MATHLIB_REF=v4.34.0
+ARG COMPARATOR_REF=v4.34.0
+ARG COMPARATOR_TOOLCHAIN=leanprover/lean4:v4.34.1
 ARG CODEX_GID=1000
 ARG CODEX_UID=1000
 
-COPY --from=ghcr.io/astral-sh/uv:0.9.10 /uv /uvx /usr/local/bin/
+COPY --from=landrun-build /out/landrun /usr/local/bin/landrun
 
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
@@ -31,6 +46,11 @@ RUN apt-get update \
         pkg-config \
         poppler-utils \
         procps \
+        python-is-python3 \
+        python3 \
+        python3-dev \
+        python3-pip \
+        python3-venv \
         ripgrep \
         tar \
         tesseract-ocr \
@@ -45,9 +65,33 @@ RUN apt-get update \
         tidy \
         unzip \
         xz-utils \
-    && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid "$CODEX_GID" codex \
     && useradd --create-home --gid codex --shell /bin/bash --uid "$CODEX_UID" codex
+
+# Keep pip installations separate from Debian's managed Python packages.
+RUN python3 -m venv /opt/venv \
+    && /opt/venv/bin/python -m pip install numpy "torch==${PYTORCH_VERSION}" --index-url "$PYTORCH_INDEX_URL" \
+    && chown -R codex:codex /opt/venv
+
+# Invoke the venv interpreter directly: symlinks to it do not preserve the
+# venv prefix when shells replace PATH. Keep Debian's /usr/bin tools intact.
+RUN for tool in python python3 pip pip3; do \
+        printf '#!/bin/sh\nexec /opt/venv/bin/%s "$@"\n' "$tool" > "/usr/local/bin/$tool" \
+        && chmod 0755 "/usr/local/bin/$tool" \
+        || exit 1; \
+    done \
+    && PATH=/usr/local/bin:/usr/bin:/bin python -c 'import sys, torch; assert sys.prefix == "/opt/venv"; assert torch.ones(2).sum().item() == 2; print(torch.__version__)' \
+    && PATH=/usr/local/bin:/usr/bin:/bin pip check
+
+RUN curl --fail --location --silent --show-error \
+        "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz" \
+        --output /tmp/uv.tar.gz \
+    && mkdir /tmp/uv \
+    && tar --extract --file /tmp/uv.tar.gz --gzip --directory /tmp/uv \
+    && install --mode 0755 /tmp/uv/uv-x86_64-unknown-linux-gnu/uv /usr/local/bin/uv \
+    && install --mode 0755 /tmp/uv/uv-x86_64-unknown-linux-gnu/uvx /usr/local/bin/uvx \
+    && uv --version \
+    && rm -rf /tmp/uv /tmp/uv.tar.gz
 
 RUN curl --fail --location --silent --show-error \
         "https://github.com/openai/codex/releases/download/rust-v${CODEX_VERSION}/codex-package-x86_64-unknown-linux-musl.tar.gz" \
@@ -79,7 +123,8 @@ COPY --chmod=0755 home/bin/lean-mathlib.sh /usr/local/bin/lean-mathlib.sh
 
 ENV HOME=/home/codex \
     ELAN_HOME=/opt/elan \
-    PATH=/home/codex/bin:/opt/elan/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
+    VIRTUAL_ENV=/opt/venv \
+    PATH=/home/codex/bin:/opt/venv/bin:/opt/elan/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
 
 USER codex
 
@@ -101,5 +146,19 @@ RUN git clone --depth 1 --branch "$MATHLIB_REF" \
     && lake exe cache get || true \
     && lake build
 
+# Keep the matching exporter and Comparator outside the mounted home directory.
+# Use an explicit toolchain without changing the default Lean/Mathlib version.
+RUN elan toolchain install "$COMPARATOR_TOOLCHAIN" \
+    && git clone --depth 1 --branch "$COMPARATOR_REF" \
+        https://github.com/leanprover/comparator.git /tmp/comparator \
+    && cd /tmp/comparator \
+    && elan run "$COMPARATOR_TOOLCHAIN" lake build lean4export comparator
+
+USER root
+RUN install --mode 0755 /tmp/comparator/.lake/build/bin/comparator /usr/local/bin/comparator \
+    && install --mode 0755 /tmp/comparator/.lake/packages/lean4export/.lake/build/bin/lean4export /usr/local/bin/lean4export \
+    && rm -rf /tmp/comparator
+
+USER codex
 WORKDIR /home/codex/workspace
 ENTRYPOINT ["codex"]

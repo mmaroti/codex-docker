@@ -36,7 +36,7 @@ docker_args=(
     --env UV_CACHE_DIR=/tmp/uv-cache
     # Codex tool shells may replace the image PATH, so pass the required paths
     # explicitly at container start as well.
-    --env PATH=/home/codex/bin:/opt/elan/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
+    --env PATH=/home/codex/bin:/opt/venv/bin:/opt/elan/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
 )
 
 # Request GPU access only when the host exposes an NVIDIA GPU.
