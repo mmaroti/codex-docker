@@ -12,4 +12,4 @@ builder_dir=$(dirname -- "$builder_path")
 exec docker build \
   --build-arg CODEX_UID="$(id -u)" \
   --build-arg CODEX_GID="$(id -g)" \
-  -f "$builder_dir/Dockerfile.codex" -t codex:0.162.1 "$builder_dir"
+  -f "$builder_dir/Dockerfile.codex" -t codex:0.163.0 "$builder_dir"

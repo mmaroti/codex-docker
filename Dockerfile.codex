@@ -1,14 +1,13 @@
 FROM debian:13-slim
 
-ARG CODEX_VERSION=0.162.1
-ARG UV_VERSION=0.9.10
+ARG CODEX_VERSION=0.163.0
+ARG UV_VERSION=0.13.1
 ARG PYTORCH_VERSION=2.11.0
 ARG PYTORCH_INDEX_URL=https://download.pytorch.org/whl/cu128
 ARG VAMPIRE_VERSION=5.1.0
 ARG ELAN_VERSION=4.2.4
-ARG MATHLIB_REF=v4.34.0
+ARG MATHLIB_REF=v4.35.0
 ARG LEAN_TOOLCHAIN=leanprover/lean4:${MATHLIB_REF}
-ARG LANDRUN_VERSION=0.1.17
 ARG CODEX_GID=1000
 ARG CODEX_UID=1000
 
@@ -16,6 +15,7 @@ RUN apt-get update \
     && apt-get install --no-install-recommends -y \
         bash \
         build-essential \
+        bubblewrap \
         ca-certificates \
         cadical \
         cmake \
@@ -50,16 +50,12 @@ RUN apt-get update \
         texlive-latex-base \
         texlive-latex-extra \
         texlive-latex-recommended \
+        texlive-science \
         tidy \
         unzip \
         xz-utils \
     && groupadd --gid "$CODEX_GID" codex \
     && useradd --create-home --gid codex --shell /bin/bash --uid "$CODEX_UID" codex
-
-# Build a pinned Landrun release.
-RUN CGO_ENABLED=0 GOBIN=/usr/local/bin go install \
-        github.com/zouuup/landrun/cmd/landrun@v${LANDRUN_VERSION} \
-    && landrun --version
 
 # Keep pip installations separate from Debian's managed Python packages.
 RUN python3 -m venv /opt/venv \
@@ -131,6 +127,9 @@ RUN curl --fail --location --silent --show-error \
     && elan default "$LEAN_TOOLCHAIN" \
     && lean --version \
     && lake --version \
+    && lake help comparator \
+    && lake help check \
+    && bwrap --version \
     && rm -rf /tmp/elan /tmp/elan.tar.gz
 
 RUN git clone --depth 1 --branch "$MATHLIB_REF" \
@@ -138,18 +137,6 @@ RUN git clone --depth 1 --branch "$MATHLIB_REF" \
     && cd /opt/mathlib \
     && (lake exe cache get || true) \
     && lake build
-
-# Keep the matching exporter and Comparator alongside the other system tools.
-# Use an explicit toolchain without changing the default Lean/Mathlib version.
-RUN git clone --depth 1 --branch "$MATHLIB_REF" \
-        https://github.com/leanprover/comparator.git /tmp/comparator \
-    && cd /tmp/comparator \
-    && elan run "$LEAN_TOOLCHAIN" lake build lean4export comparator
-
-USER root
-RUN install --mode 0755 /tmp/comparator/.lake/build/bin/comparator /usr/local/bin/comparator \
-    && install --mode 0755 /tmp/comparator/.lake/packages/lean4export/.lake/build/bin/lean4export /usr/local/bin/lean4export \
-    && rm -rf /tmp/comparator
 
 # Seed each container's private home with all files from the home template.
 # Codex state is mounted separately by run-codex.sh and never copied into the image.
