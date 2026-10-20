@@ -8,6 +8,7 @@ Build and authenticate from this directory:
 
 ```bash
 ./build-image.sh
+./install-apparmor.sh
 ./run-codex.sh login
 ```
 
@@ -61,3 +62,48 @@ Docker security settings must permit Bubblewrap to create its namespaces.
 Installing Bubblewrap in the image alone does not guarantee host support. Check
 with `run-codex.sh bash -c 'bwrap --ro-bind / / --unshare-user --unshare-pid --unshare-net --proc /proc --dev /dev true'`
 and then run a Comparator check in your project.
+
+To install the launcher's AppArmor policy, run
+on the Docker host (not inside a container):
+
+```bash
+sudo apt-get install apparmor apparmor-utils golang-go python3 dpkg-dev
+./install-apparmor.sh
+```
+
+The installer needs enabled APT source (`deb-src`) repositories and an up-to-date
+package index. It downloads the exact installed Docker package source, replaces
+the mount denial with mount permission, and adds `pivot_root`. It writes the
+generated, Git-ignored `codex-docker.apparmor` beside the script, validates it,
+then installs it at `/etc/apparmor.d/codex-docker.apparmor` and loads profile
+`codex-docker`. Docker's own profile and running containers are unaffected.
+Run the installer again after upgrading Docker. It stops if the expected
+template cannot be identified. Use `--generate-only` to generate without sudo
+or installation, or `--source-dir DIR` to use already extracted matching source.
+Run `./install-apparmor.sh --uninstall` on the host to unload the profile and
+remove its installed file. This retains the generated repository copy and the
+seccomp policy. Unloading removes AppArmor confinement from processes still
+using that profile; stop those containers first if they must remain confined.
+
+`run-codex.sh` selects that profile and the accompanying
+`codex-docker.seccomp.json`. Host installation and an actual
+Bubblewrap/Comparator check are still needed to verify compatibility.
+
+If Docker's masked `/proc` prevents Bubblewrap from mounting a fresh procfs,
+an opt-in adapter is available without disabling Docker's system-path guards:
+
+```bash
+COMPARATOR_BWRAP="$HOME/bin/comparator-bwrap.sh" lake comparator
+COMPARATOR_BWRAP="$HOME/bin/comparator-bwrap.sh" lake check
+```
+
+Rebuild the image to seed this script into new containers. For testing from
+this repository without rebuilding, use
+`COMPARATOR_BWRAP="$PWD/home/bin/comparator-bwrap.sh"` instead.
+The adapter replaces Lake's procfs mount with a read-only bind of the
+container's `/proc` and retains the container's PID namespace. Other sandbox
+mounts, environment clearing, and requested network isolation remain in place.
+It does not provide isolation from other processes or credentials inside the
+container: procfs references can bypass hidden directories where permissions
+allow. Use it when Docker is the trusted boundary. It requires the `/run/user`
+mount supplied by the launcher and should be rechecked after Lean upgrades.
