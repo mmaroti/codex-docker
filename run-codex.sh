@@ -1,14 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Resolve symlinks so a launcher linked into PATH still finds its policy.
-script_dir=$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")
-seccomp_profile="$script_dir/codex-docker.seccomp.json"
-if [[ ! -r $seccomp_profile ]]; then
-    echo "Missing seccomp profile: $seccomp_profile" >&2
-    exit 1
-fi
-
 codex_uid=${CODEX_UID:-$(id -u)}
 codex_gid=${CODEX_GID:-$(id -g)}
 codex_home=${CODEX_DOCKER_HOME:-${HOME}/.codex-docker}
@@ -25,13 +17,8 @@ docker_args=(
     run --rm --interactive --tty
     --cap-drop ALL
     --security-opt no-new-privileges
-    --security-opt "apparmor=codex-docker"
-    --security-opt "seccomp=$seccomp_profile"
     --user "${codex_uid}:${codex_gid}"
     --tmpfs "/tmp:rw,exec,nosuid,nodev,size=4g,uid=${codex_uid},gid=${codex_gid},mode=1777"
-    # Lake's Bubblewrap sandbox requires this target to exist under read-only /.
-    --tmpfs /run/user:rw,noexec,nosuid,nodev,size=1m,mode=0755
-    --mount "type=bind,src=/etc/localtime,dst=/etc/localtime,readonly"
     --mount "type=bind,src=${workspace_dir},dst=/home/codex/workspace"
     --mount "type=bind,src=${codex_home},dst=/home/codex/.codex"
     --workdir /home/codex/workspace
