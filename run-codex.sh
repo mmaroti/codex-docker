@@ -4,7 +4,7 @@ set -euo pipefail
 codex_uid=${CODEX_UID:-$(id -u)}
 codex_gid=${CODEX_GID:-$(id -g)}
 codex_home=${CODEX_DOCKER_HOME:-${HOME}/.codex-docker}
-codex_image=${CODEX_IMAGE:-codex:0.163.0}
+codex_image=${CODEX_IMAGE:-codex:0.166.0}
 workspace_dir=$(pwd -P)
 
 mkdir -p -- "$codex_home"
